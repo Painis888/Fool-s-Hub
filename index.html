@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyMangalist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Animation for manga cards */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .manga-card {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* Drag and drop styling */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        .drop-zone {
+            border: 2px dashed #4b5563;
+            background-color: rgba(75, 85, 99, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-indigo-800 mb-4 md:mb-0">
+                <i class="fas fa-book-open mr-2"></i>MyMangalist
+            </h1>
+            <div class="relative group">
+                <button id="addMangaBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition-all">
+                    <i class="fas fa-plus mr-2"></i> Add Manga
+                </button>
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 hidden group-hover:block transition-all duration-300">
+                    <div class="py-1">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50" onclick="openAddModal('Reading')">Add to Reading</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50" onclick="openAddModal('Completed')">Add to Completed</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50" onclick="openAddModal('Plan to Read')">Add to Plan to Read</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50" onclick="openAddModal('Propped')">Add to Propped</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Category Tabs -->
+        <div class="flex overflow-x-auto mb-6 pb-2 custom-scrollbar">
+            <button onclick="changeCategory('Reading')" class="category-tab flex-shrink-0 px-6 py-2 mr-2 rounded-lg font-medium bg-indigo-100 text-indigo-800 flex items-center">
+                <i class="fas fa-book-reader mr-2"></i> Reading <span id="reading-count" class="ml-2 bg-indigo-200 px-2 py-0.5 rounded-full text-xs">0</span>
+            </button>
+            <button onclick="changeCategory('Completed')" class="category-tab flex-shrink-0 px-6 py-2 mr-2 rounded-lg font-medium bg-green-100 text-green-800 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i> Completed <span id="completed-count" class="ml-2 bg-green-200 px-2 py-0.5 rounded-full text-xs">0</span>
+            </button>
+            <button onclick="changeCategory('Plan to Read')" class="category-tab flex-shrink-0 px-6 py-2 mr-2 rounded-lg font-medium bg-blue-100 text-blue-800 flex items-center">
+                <i class="fas fa-list-ul mr-2"></i> Plan to Read <span id="plan-count" class="ml-2 bg-blue-200 px-2 py-0.5 rounded-full text-xs">0</span>
+            </button>
+            <button onclick="changeCategory('Dropped')" class="category-tab flex-shrink-0 px-6 py-2 rounded-lg font-medium bg-purple-100 text-purple-800 flex items-center">
+                <i class="fas fa-heart mr-2"></i> Dropped <span id="propped-count" class="ml-2 bg-purple-200 px-2 py-0.5 rounded-full text-xs">0</span>
+            </button>
+        </div>
+
+        <!-- Current Category Title -->
+        <h2 id="current-category" class="text-2xl font-semibold mb-4 text-gray-800">Reading</h2>
+
+        <!-- Manga List -->
+        <div id="manga-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Manga cards will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-12 hidden">
+            <i class="fas fa-book text-5xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-medium text-gray-500">No manga in this category yet</h3>
+            <p class="text-gray-400 mb-4">Add your first manga to get started!</p>
+            <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-plus mr-2"></i> Add Manga
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Manga Modal -->
+    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Add New Manga</h3>
+                <button onclick="closeAddModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addMangaForm" onsubmit="addManga(event)">
+                <div class="mb-4">
+                    <label for="mangaTitle" class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                    <input type="text" id="mangaTitle" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label for="mangaCategory" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                    <select id="mangaCategory" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Reading">Reading</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Plan to Read">Plan to Read</option>
+                        <option value="Propped">Propped</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="mangaCover" class="block text-sm font-medium text-gray-700 mb-1">Cover Image URL</label>
+                    <input type="url" id="mangaCover" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="closeAddModal()" class="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Add Manga</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Edit Manga</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editMangaForm" onsubmit="updateManga(event)">
+                <input type="hidden" id="editMangaId">
+                <div class="mb-4">
+                    <label for="editMangaTitle" class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                    <input type="text" id="editMangaTitle" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label for="editMangaCategory" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                    <select id="editMangaCategory" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Reading">Reading</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Plan to Read">Plan to Read</option>
+                        <option value="Propped">Propped</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="editMangaCover" class="block text-sm font-medium text-gray-700 mb-1">Cover Image URL</label>
+                    <input type="url" id="editMangaCover" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-between">
+                    <button type="button" onclick="deleteManga()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                    <div>
+                        <button type="button" onclick="closeEditModal()" class="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Save Changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let currentCategory = 'Reading';
+        let mangas = JSON.parse(localStorage.getItem('mangas')) || [];
+        let draggedItem = null;
+
+        // DOM elements
+        const mangaListEl = document.getElementById('manga-list');
+        const emptyStateEl = document.getElementById('empty-state');
+        const currentCategoryEl = document.getElementById('current-category');
+        const categoryTabs = document.querySelectorAll('.category-tab');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCategoryCounts();
+            renderMangaList();
+            
+            // Set up drag and drop events
+            setupDragAndDrop();
+        });
+
+        // Change the current category
+        function changeCategory(category) {
+            currentCategory = category;
+            currentCategoryEl.textContent = category;
+            
+            // Update active tab styling
+            categoryTabs.forEach(tab => {
+                tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+                tab.classList.add('bg-opacity-20');
+                
+                if (tab.textContent.includes(category)) {
+                    tab.classList.remove('bg-opacity-20');
+                    
+                    // Set color based on category
+                    if (category === 'Reading') {
+                        tab.classList.add('bg-indigo-600', 'text-white');
+                    } else if (category === 'Completed') {
+                        tab.classList.add('bg-green-600', 'text-white');
+                    } else if (category === 'Plan to Read') {
+                        tab.classList.add('bg-blue-600', 'text-white');
+                    } else if (category === 'Propped') {
+                        tab.classList.add('bg-purple-600', 'text-white');
+                    }
+                }
+            });
+            
+            renderMangaList();
+        }
+
+        // Render the manga list for the current category
+        function renderMangaList() {
+            const filteredMangas = mangas.filter(manga => manga.category === currentCategory);
+            
+            if (filteredMangas.length === 0) {
+                mangaListEl.innerHTML = '';
+                emptyStateEl.classList.remove('hidden');
+                return;
+            }
+            
+            emptyStateEl.classList.add('hidden');
+            mangaListEl.innerHTML = '';
+            
+            filteredMangas.forEach(manga => {
+                const mangaCard = createMangaCard(manga);
+                mangaListEl.appendChild(mangaCard);
+            });
+        }
+
+        // Create a manga card element
+        function createMangaCard(manga) {
+            const card = document.createElement('div');
+            card.className = 'manga-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 relative group';
+            card.setAttribute('data-id', manga.id);
+            card.setAttribute('draggable', 'true');
+            
+            // Set card color based on category
+            let borderColor = 'border-indigo-200';
+            if (manga.category === 'Completed') borderColor = 'border-green-200';
+            else if (manga.category === 'Plan to Read') borderColor = 'border-blue-200';
+            else if (manga.category === 'Propped') borderColor = 'border-purple-200';
+            
+            card.innerHTML = `
+                <div class="border-l-4 ${borderColor} h-full">
+                    <div class="p-4">
+                        ${manga.cover ? `
+                            <div class="mb-3 overflow-hidden rounded-lg">
+                                <img src="${manga.cover}" alt="${manga.title}" class="w-full h-40 object-cover hover:scale-105 transition-transform duration-300">
+                            </div>
+                        ` : `
+                            <div class="mb-3 bg-gray-100 rounded-lg flex items-center justify-center h-40 text-gray-400">
+                                <i class="fas fa-book-open text-4xl"></i>
+                            </div>
+                        `}
+                        <h3 class="font-medium text-lg text-gray-800 mb-1 truncate">${manga.title}</h3>
+                        <span class="inline-block px-2 py-1 text-xs rounded-full ${getCategoryBadgeClass(manga.category)} mb-3">
+                            ${manga.category}
+                        </span>
+                        <div class="flex justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button onclick="openEditModal('${manga.id}')" class="text-indigo-600 hover:text-indigo-800">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="deleteManga('${manga.id}')" class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Get badge class based on category
+        function getCategoryBadgeClass(category) {
+            switch(category) {
+                case 'Reading': return 'bg-indigo-100 text-indigo-800';
+                case 'Completed': return 'bg-green-100 text-green-800';
+                case 'Plan to Read': return 'bg-blue-100 text-blue-800';
+                case 'Propped': return 'bg-purple-100 text-purple-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Update the count badges for each category
+        function updateCategoryCounts() {
+            const readingCount = mangas.filter(m => m.category === 'Reading').length;
+            const completedCount = mangas.filter(m => m.category === 'Completed').length;
+            const planCount = mangas.filter(m => m.category === 'Plan to Read').length;
+            const proppedCount = mangas.filter(m => m.category === 'Propped').length;
+            
+            document.getElementById('reading-count').textContent = readingCount;
+            document.getElementById('completed-count').textContent = completedCount;
+            document.getElementById('plan-count').textContent = planCount;
+            document.getElementById('propped-count').textContent = proppedCount;
+        }
+
+        // Modal functions
+        function openAddModal(defaultCategory = null) {
+            const modal = document.getElementById('addModal');
+            if (defaultCategory) {
+                document.getElementById('mangaCategory').value = defaultCategory;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+            document.getElementById('addMangaForm').reset();
+        }
+
+        function openEditModal(mangaId) {
+            const modal = document.getElementById('editModal');
+            const manga = mangas.find(m => m.id === mangaId);
+            
+            if (manga) {
+                document.getElementById('editMangaId').value = manga.id;
+                document.getElementById('editMangaTitle').value = manga.title;
+                document.getElementById('editMangaCategory').value = manga.category;
+                document.getElementById('editMangaCover').value = manga.cover || '';
+                
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        // CRUD operations
+        function addManga(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('mangaTitle').value.trim();
+            const category = document.getElementById('mangaCategory').value;
+            const cover = document.getElementById('mangaCover').value.trim();
+            
+            const newManga = {
+                id: Date.now().toString(),
+                title,
+                category,
+                cover: cover || null,
+                createdAt: new Date().toISOString()
+            };
+            
+            mangas.push(newManga);
+            saveMangas();
+            
+            if (category === currentCategory) {
+                const mangaCard = createMangaCard(newManga);
+                mangaListEl.appendChild(mangaCard);
+                emptyStateEl.classList.add('hidden');
+            }
+            
+            updateCategoryCounts();
+            closeAddModal();
+        }
+
+        function updateManga(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editMangaId').value;
+            const title = document.getElementById('editMangaTitle').value.trim();
+            const category = document.getElementById('editMangaCategory').value;
+            const cover = document.getElementById('editMangaCover').value.trim();
+            
+            const mangaIndex = mangas.findIndex(m => m.id === id);
+            
+            if (mangaIndex !== -1) {
+                const oldCategory = mangas[mangaIndex].category;
+                
+                mangas[mangaIndex] = {
+                    ...mangas[mangaIndex],
+                    title,
+                    category,
+                    cover: cover || null
+                };
+                
+                saveMangas();
+                
+                // If category changed or we're viewing the old category, re-render
+                if (oldCategory !== category || currentCategory === oldCategory) {
+                    renderMangaList();
+                }
+                
+                updateCategoryCounts();
+                closeEditModal();
+            }
+        }
+
+        function deleteManga(mangaId = null) {
+            if (!mangaId) {
+                mangaId = document.getElementById('editMangaId').value;
+            }
+            
+            if (confirm('Are you sure you want to delete this manga?')) {
+                const mangaIndex = mangas.findIndex(m => m.id === mangaId);
+                
+                if (mangaIndex !== -1) {
+                    const deletedManga = mangas[mangaIndex];
+                    mangas.splice(mangaIndex, 1);
+                    saveMangas();
+                    
+                    // If we're viewing the category of the deleted manga, re-render
+                    if (deletedManga.category === currentCategory) {
+                        renderMangaList();
+                    }
+                    
+                    updateCategoryCounts();
+                    
+                    // If we're in the edit modal, close it
+                    if (document.getElementById('editModal').classList.contains('hidden') === false) {
+                        closeEditModal();
+                    }
+                }
+            }
+        }
+
+        // Save mangas to localStorage
+        function saveMangas() {
+            localStorage.setItem('mangas', JSON.stringify(mangas));
+        }
+
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            // Drag start event
+            document.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('manga-card')) {
+                    draggedItem = e.target;
+                    e.target.classList.add('dragging');
+                    
+                    // Set the drag image to be the card itself
+                    const rect = e.target.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    e.dataTransfer.setDragImage(e.target, x, y);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-id'));
+                }
+            });
+            
+            // Drag end event
+            document.addEventListener('dragend', (e) => {
+                if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null;
+                }
+            });
+            
+            // Drag over event for manga list
+            mangaListEl.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                // Highlight potential drop position
+                const afterElement = getDragAfterElement(mangaListEl, e.clientY);
+                const currentItem = document.querySelector('.dragging');
+                
+                if (afterElement == null) {
+                    mangaListEl.appendChild(currentItem);
+                } else {
+                    mangaListEl.insertBefore(currentItem, afterElement);
+                }
+            });
+            
+            // Drop event for category tabs
+            categoryTabs.forEach(tab => {
+                tab.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    tab.classList.add('drop-zone');
+                });
+                
+                tab.addEventListener('dragleave', () => {
+                    tab.classList.remove('drop-zone');
+                });
+                
+                tab.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    tab.classList.remove('drop-zone');
+                    
+                    if (draggedItem) {
+                        const mangaId = draggedItem.getAttribute('data-id');
+                        const newCategory = tab.textContent.trim().split(' ')[0]; // Get first word (category name)
+                        
+                        if (['Reading', 'Completed', 'Plan', 'Propped'].some(cat => newCategory.includes(cat))) {
+                            const fullCategoryName = 
+                                newCategory === 'Plan' ? 'Plan to Read' : 
+                                newCategory === 'Propped' ? 'Propped' : 
+                                newCategory;
+                            
+                            const mangaIndex = mangas.findIndex(m => m.id === mangaId);
+                            
+                            if (mangaIndex !== -1) {
+                                mangas[mangaIndex].category = fullCategoryName;
+                                saveMangas();
+                                
+                                // If we dropped in the current category, re-render to maintain order
+                                if (currentCategory === fullCategoryName) {
+                                    renderMangaList();
+                                } else {
+                                    // Otherwise remove the card (it moved to another category)
+                                    draggedItem.remove();
+                                    
+                                    // Show empty state if no more items
+                                    if (mangaListEl.children.length === 0) {
+                                        emptyStateEl.classList.remove('hidden');
+                                    }
+                                }
+                                
+                                updateCategoryCounts();
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // Helper function to determine drop position
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.manga-card:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=THEFOOL5656/fool-s-party" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
