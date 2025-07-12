@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyList</title>
+    <title>Fool's List</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -48,7 +48,7 @@
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-indigo-800 mb-4 md:mb-0">
-                <i class="fas fa-book-open mr-2"></i>SAHIL'S LIST
+                <i class="fas fa-book-open mr-2"></i>FOOL'S LIST
             </h1>
             <div class="relative group">
                 <button id="addMangaBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition-all">
@@ -77,7 +77,7 @@
                 <i class="fas fa-list-ul mr-2"></i> Plan to Read <span id="plan-count" class="ml-2 bg-blue-200 px-2 py-0.5 rounded-full text-xs">0</span>
             </button>
             <button onclick="changeCategory('Dropped')" class="category-tab flex-shrink-0 px-6 py-2 rounded-lg font-medium bg-purple-100 text-purple-800 flex items-center">
-                <i class="fas fa-heart mr-2"></i> Dropped <span id="propped-count" class="ml-2 bg-purple-200 px-2 py-0.5 rounded-full text-xs">0</span>
+                <i class="fas fa-heart mr-2"></i> Dropped <span id="Dropped-count" class="ml-2 bg-purple-200 px-2 py-0.5 rounded-full text-xs">0</span>
             </button>
         </div>
 
@@ -156,7 +156,7 @@
                         <option value="Reading">Reading</option>
                         <option value="Completed">Completed</option>
                         <option value="Plan to Read">Plan to Read</option>
-                        <option value="Propped">Propped</option>
+                        <option value="Dropped">Dropped</option>
                     </select>
                 </div>
                 <div class="mb-4">
@@ -217,7 +217,7 @@
                         tab.classList.add('bg-green-600', 'text-white');
                     } else if (category === 'Plan to Read') {
                         tab.classList.add('bg-blue-600', 'text-white');
-                    } else if (category === 'Propped') {
+                    } else if (category === 'Dropped') {
                         tab.classList.add('bg-purple-600', 'text-white');
                     }
                 }
@@ -256,7 +256,7 @@
             let borderColor = 'border-indigo-200';
             if (manga.category === 'Completed') borderColor = 'border-green-200';
             else if (manga.category === 'Plan to Read') borderColor = 'border-blue-200';
-            else if (manga.category === 'Propped') borderColor = 'border-purple-200';
+            else if (manga.category === 'Dropped') borderColor = 'border-purple-200';
             
             card.innerHTML = `
                 <div class="border-l-4 ${borderColor} h-full">
@@ -305,12 +305,12 @@
             const readingCount = mangas.filter(m => m.category === 'Reading').length;
             const completedCount = mangas.filter(m => m.category === 'Completed').length;
             const planCount = mangas.filter(m => m.category === 'Plan to Read').length;
-            const proppedCount = mangas.filter(m => m.category === 'Propped').length;
+            const proppedCount = mangas.filter(m => m.category === 'Dropped').length;
             
             document.getElementById('reading-count').textContent = readingCount;
             document.getElementById('completed-count').textContent = completedCount;
             document.getElementById('plan-count').textContent = planCount;
-            document.getElementById('propped-count').textContent = proppedCount;
+            document.getElementById('Dropped-count').textContent = DroppedCount;
         }
 
         // Modal functions
@@ -502,10 +502,10 @@
                         const mangaId = draggedItem.getAttribute('data-id');
                         const newCategory = tab.textContent.trim().split(' ')[0]; // Get first word (category name)
                         
-                        if (['Reading', 'Completed', 'Plan', 'Propped'].some(cat => newCategory.includes(cat))) {
+                        if (['Reading', 'Completed', 'Plan', 'Dropped'].some(cat => newCategory.includes(cat))) {
                             const fullCategoryName = 
                                 newCategory === 'Plan' ? 'Plan to Read' : 
-                                newCategory === 'Propped' ? 'Propped' : 
+                                newCategory === 'Dropped' ? 'Dropped' : 
                                 newCategory;
                             
                             const mangaIndex = mangas.findIndex(m => m.id === mangaId);
